@@ -1,0 +1,25 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: sds-ocr-image-repo
+spec:
+  image: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/sds-ocr-worker
+  interval: 5m
+  secretRef:
+    name: regcred
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: sds-ocr-image-policy
+spec:
+  imageRepositoryRef:
+    name: sds-ocr-image-repo
+  filterTags:
+    pattern: '^\d+(\.\d+)*-develop-[a-zA-Z0-9]+-(?P<ts>.*)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc

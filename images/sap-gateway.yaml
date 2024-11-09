@@ -1,0 +1,25 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: sap-gateway-image-repo
+spec:
+  image: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-saifty-sap-gateway
+  interval: 5m
+  secretRef:
+    name: regcred
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: sap-gateway-image-policy
+spec:
+  imageRepositoryRef:
+    name: sap-gateway-image-repo
+  filterTags:
+    pattern: '^\d+(\.\d+)*-heraeus-[a-zA-Z0-9]+-(?P<ts>.*)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc

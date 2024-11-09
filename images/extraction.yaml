@@ -1,0 +1,41 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: extraction-api-image-repo
+spec:
+  image: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/saifty-extraction
+  interval: 5m
+  secretRef:
+    name: regcred
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: extraction-api-image-policy
+spec:
+  imageRepositoryRef:
+    name: extraction-api-image-repo
+  filterTags:
+    pattern: '^\d+(\.\d+)*-release-api-[a-zA-Z0-9]+-(?P<ts>.*)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: extraction-worker-image-policy
+  namespace: flux-system
+spec:
+  imageRepositoryRef:
+    name: extraction-api-image-repo
+  filterTags:
+    pattern: '^\d+(\.\d+)*-release-worker-[a-zA-Z0-9]+-(?P<ts>.*)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc

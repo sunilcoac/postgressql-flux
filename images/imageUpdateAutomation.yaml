@@ -1,0 +1,25 @@
+apiVersion: image.toolkit.fluxcd.io/v1beta1
+kind: ImageUpdateAutomation
+metadata:
+  name: image-update
+spec:
+  interval: 30m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+    namespace: flux-system
+  git:
+    checkout:
+      ref:
+        branch: main
+    commit:
+      author:
+        email: robin.ranabhat@coac.de
+        name: robin-coac
+      messageTemplate: 'FLUX-BOT : updated the ecr image '
+
+    push:
+      branch: main
+  update:
+    path: ./saifty/base/saifty_releases
+    strategy: Setters

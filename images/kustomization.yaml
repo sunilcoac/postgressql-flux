@@ -1,0 +1,19 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: flux-system
+resources:
+  - approvals.yaml
+  - av-server.yaml
+  - echa.yaml
+  - extraction.yaml
+  - filestorage.yaml
+  - frontend.yaml
+  - library-backend.yaml
+  - monolith.yaml
+  - rate-limiter.yaml
+  - robots-wrapper.yaml
+  - fed-client.yaml
+  - phrases.yaml
+  - sap-gateway.yaml
+  - imageUpdateAutomation.yaml
+  - sds-ocr-worker.yaml

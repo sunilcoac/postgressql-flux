@@ -1,0 +1,25 @@
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImageRepository
+metadata:
+  name: filestorage-image-repo
+spec:
+  image: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-filestorage-backend-core
+  interval: 5m
+  secretRef:
+    name: regcred
+
+---
+apiVersion: image.toolkit.fluxcd.io/v1beta2
+kind: ImagePolicy
+metadata:
+  name: filestorage-image-policy
+spec:
+  imageRepositoryRef:
+    name: filestorage-image-repo
+  filterTags:
+    pattern: '^\d+(\.\d+)*-release-[a-zA-Z0-9]+-(?P<ts>.*)$'
+    extract: '$ts'
+  policy:
+    numerical:
+      order: asc
