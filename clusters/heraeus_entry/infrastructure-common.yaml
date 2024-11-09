@@ -1,0 +1,253 @@
+# ## Install external-secrets
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: external-secrets-helm
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   dependsOn:
+#     - name: custom-ns
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/externalsecrets/base/
+#   prune: true
+#   wait: true
+
+# # Aws creds for dns namespace
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: external-secrets-dns
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   timeout: 5m
+#   dependsOn:
+#     - name: custom-ns
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/externalsecrets/dns/
+#   prune: true
+#   wait: true
+
+
+# ## Fetch aws secrets from Vault for flux-system ns
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: external-secrets-flux-system
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   dependsOn:
+#     - name: external-secrets-helm
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/externalsecrets/flux-system-aws/
+#   prune: true
+#   wait: true
+
+# ## Add Cronjob for ECR at flux-system namespace
+# ## Used by Image update controller at download images
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: ecr-sync-flux-system
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   dependsOn:
+#     - name: external-secrets
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/ecr-sync/flux-system/
+#   prune: true
+#   wait: true
+# ## Add Nginx-Controller
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: infra-nginx-controller
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/ingress-nginx/overlays/dev/
+#   prune: true
+#   wait: true
+
+# # Add external-dns
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: external-dns
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/external-dns/base/
+#   prune: true
+#   wait: true
+
+# # Add cert-manager crds
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: cert-manager-crds
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   dependsOn:
+#     - name: external-dns
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/cert-manager/base/crds/
+#   prune: true
+#   wait: true
+
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: cert-manager-main
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   dependsOn:
+#     - name: cert-manager-crds
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/cert-manager/base/
+#   prune: true
+#   wait: true
+
+# # Add letsencrypt-clusterissuer
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: letsencrypt-clusterissuer
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   dependsOn:
+#     - name: cert-manager-main
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/letsencrypt-certificates/base/cluster-issuer/
+#   prune: true
+#   wait: true
+
+# # Add letsencrypt-certificates
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: letsencrypt-certificates
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   dependsOn:
+#     - name: letsencrypt-clusterissuer
+#   timeout: 5m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/letsencrypt-certificates/base/
+#   prune: true
+#   wait: true
+
+# ## Add operators for Robots (nifi)
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: robots-operators-crds
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   dependsOn:
+#     - name: ecr-sync-saifty-flux
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/robots/base/crds
+#   prune: true
+#   wait: true
+
+# ## Add Vault
+# # ---
+# # apiVersion: kustomize.toolkit.fluxcd.io/v1
+# # kind: Kustomization
+# # metadata:
+# #   name: infra-vault
+# #   namespace: flux-system
+# # spec:
+# #   interval: 1h
+# #   retryInterval: 1m
+# #   timeout: 50m
+# #   sourceRef:
+# #     kind: GitRepository
+# #     name: flux-system
+# #   path: ./cluster-services/vault/base/
+# #   prune: true
+# #   wait: true
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: postgres-operator-crds
+  namespace: flux-system
+spec:
+  interval: 60m
+  # retryInterval: 1m
+  timeout: 20m
+  dependsOn:
+    - name: ecr-sync-saifty-flux
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./cluster-services/postgres-operator/base/crds
+  prune: true
+  wait: true
+
+  

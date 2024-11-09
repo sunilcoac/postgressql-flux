@@ -1,0 +1,72 @@
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: custom-ns
+  namespace: flux-system
+spec:
+  interval: 30m
+  # retryInterval: 1m
+  timeout: 15m
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./cluster-services/namespaces
+  prune: true
+  wait: true
+
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: prod-app
+#   namespace: flux-system
+# spec:
+#   interval: 30m
+#   # retryInterval: 1m
+#   timeout: 15m
+#   dependsOn:
+#     - name: postgres-operator-prod
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./saifty/prod
+#   prune: true
+#   wait: true
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: dev-app
+  namespace: flux-system
+spec:
+  interval: 30m
+  # retryInterval: 1m
+  timeout: 15m
+  dependsOn:
+    - name: postgres-operator-main
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./saifty/dev
+  prune: true
+  wait: true
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: post-deployment-jobs
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 30m
+#   dependsOn:
+#     - name: dev-app
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/post-deployment
+#   prune: true
+#   wait: true
+#   force: true ## This is necessary to re-create job when flux reconciles !

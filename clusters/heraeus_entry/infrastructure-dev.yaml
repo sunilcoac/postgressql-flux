@@ -1,0 +1,156 @@
+## Fetch secrets from Vault (including aws credentials)
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: external-secrets
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   dependsOn:
+#     - name: external-secrets-helm
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/externalsecrets/
+#   prune: true
+#   wait: true
+
+## Add Cronjob for ECR at saifty-flux namespace
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: ecr-sync-saifty-flux
+#   namespace: flux-system
+# spec:
+#   interval: 10m
+#   # retryInterval: 1m
+#   timeout: 5m
+#   dependsOn:
+#     - name: external-secrets
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/ecr-sync/base/
+#   prune: true
+#   wait: true
+
+
+## Add Robots ( nifi )
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: robots-nifi
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   dependsOn:
+#    - name: robots-operators-crds
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/robots/base/
+#   prune: true
+#   wait: true
+
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: nats-kustomization
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/nats
+#   prune: true
+#   wait: true
+
+
+## Add Image Controllers
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: image-controller-kustomization
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   dependsOn:
+#     - name: ecr-sync-flux-system
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./images/
+#   prune: true
+#   wait: true
+
+
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: postgres-operator-main
+  namespace: flux-system
+spec:
+  interval: 60m
+  # retryInterval: 1m
+  timeout: 20m
+  dependsOn:
+    - name: postgres-operator-crds
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./cluster-services/postgres-operator/base/
+  prune: true
+  wait: true
+
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: saifty-lake
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 45m
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/saifty-cloud
+#   prune: true
+#   wait: true
+
+
+# ---
+# apiVersion: kustomize.toolkit.fluxcd.io/v1
+# kind: Kustomization
+# metadata:
+#   name: vault-token-renew
+#   namespace: flux-system
+# spec:
+#   interval: 60m
+#   # retryInterval: 1m
+#   timeout: 20m
+#   dependsOn:
+#     - name: external-secrets
+#   sourceRef:
+#     kind: GitRepository
+#     name: flux-system
+#   path: ./cluster-services/vault/base/
+#   prune: true
+#   wait: true
+
