@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: saifty-flux
+resources:
+  - minio.yaml
+  - hive-operator.yaml
+  - trino-operator.yaml
+  

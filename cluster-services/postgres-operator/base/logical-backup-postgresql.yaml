@@ -1,0 +1,125 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  labels:
+    application: spilo
+    cluster-name: postgresql
+    team: acid
+  name: logical-backup-postgresql
+  namespace: saifty-flux
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        metadata:
+          labels:
+            application: spilo-logical-backup
+            cluster-name: postgresql
+            team: acid
+          namespace: saifty-flux
+        spec:
+          affinity:
+            podAffinity:
+              preferredDuringSchedulingIgnoredDuringExecution:
+                - podAffinityTerm:
+                    labelSelector:
+                      matchLabels:
+                        application: spilo-logical-backup
+                        cluster-name: postgresql
+                        team: acid
+                    topologyKey: kubernetes.io/hostname
+                  weight: 1
+          containers:
+            - env:
+                - name: SCOPE
+                  value: postgresql
+                - name: CLUSTER_NAME_LABEL
+                  value: cluster-name
+                - name: POD_NAMESPACE
+                  valueFrom:
+                    fieldRef:
+                      apiVersion: v1
+                      fieldPath: metadata.namespace
+                - name: PG_VERSION
+                  value: "12"
+                - name: PGPORT
+                  value: "5432"
+                - name: PGUSER
+                  value: postgres
+                - name: PGDATABASE
+                  value: postgres
+                - name: PGSSLMODE
+                  value: require
+                - name: PGPASSWORD
+                  valueFrom:
+                    secretKeyRef:
+                      key: password
+                      name: postgres.postgresql.credentials.postgresql.acid.zalan.do
+                - name: LOGICAL_BACKUP_PROVIDER
+                  value: s3
+                - name: LOGICAL_BACKUP_S3_BUCKET
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUP_S3_BUCKET
+                      name: database-backup-secrets
+                - name: LOGICAL_BACKUP_S3_BUCKET_PREFIX
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUP_S3_BUCKET_PREFIX
+                      name: database-backup-secrets
+                - name: LOGICAL_BACKUP_S3_BUCKET_SCOPE_SUFFIX
+                  value: /d1aff3d0-4a67-4910-b07a-8bdd3a0403cd
+                - name: LOGICAL_BACKUP_S3_REGION
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUP_S3_REGION
+                      name: database-backup-secrets
+                - name: LOGICAL_BACKUP_S3_ENDPOINT
+                - name: LOGICAL_BACKUP_S3_SSE
+                  value: AES256
+                - name: LOGICAL_BACKUP_S3_RETENTION_TIME
+                  value: "1 month"
+                - name: AWS_ACCESS_KEY_ID
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUP_AWS_ACCESS_KEY_ID
+                      name: database-backup-secrets
+                - name: AWS_SECRET_ACCESS_KEY
+                  valueFrom:
+                    secretKeyRef:
+                      key: BACKUP_AWS_SECRET_ACCESS_KEY
+                      name: database-backup-secrets
+              image: ghcr.io/zalando/postgres-operator/logical-backup:v1.12.2
+              imagePullPolicy: IfNotPresent
+              name: logical-backup
+              ports:
+                - containerPort: 8008
+                  protocol: TCP
+                - containerPort: 5432
+                  protocol: TCP
+                - containerPort: 8080
+                  protocol: TCP
+              resources:
+                limits:
+                  cpu: 1000m
+                  memory: 3Gi
+                requests:
+                  cpu: 100m
+                  memory: 100Mi
+              securityContext:
+                allowPrivilegeEscalation: true
+                privileged: false
+                readOnlyRootFilesystem: false
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: {}
+          serviceAccountName: postgres-pod
+          terminationGracePeriodSeconds: 300
+  schedule: 0 0 */1 * *
+  successfulJobsHistoryLimit: 3
+  suspend: false

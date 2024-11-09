@@ -1,0 +1,141 @@
+---
+# post deployment job to create snapshot repo in es
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: create-snapshot-repository
+spec:
+  template:
+    spec:
+      containers:
+        - name: create-repo
+          image: curlimages/curl:latest
+          env:
+            - name: BUCKET
+              valueFrom:
+                secretKeyRef:
+                  key: BACKUP_S3_BUCKET
+                  name: database-backup-secrets
+            - name: BASE_PATH
+              valueFrom:
+                secretKeyRef:
+                  key: BACKUP_ES_BASE_PATH
+                  name: database-backup-secrets
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              # Constants
+              ES_URL="https://monolith-elasticsearch:9200"
+              AUTH_HEADER="Authorization: Basic ZWxhc3RpYzphYmNkMTIz"
+              USER_AGENT_HEADER="User-Agent: insomnia/8.6.1"
+              SNAPSHOT_REPO="snapshot-s5-repo"
+              PAYLOAD='{"type":"s3","settings":{"bucket":"REPLACEBUCKET","region":"eu-central-1","base_path":"REPLACEBASEPATH","max_snapshot_bytes_per_sec":"500mb","max_restore_bytes_per_sec":"1gb"}}'
+              PAYLOAD=$(echo "$PAYLOAD" | sed "s/REPLACEBUCKET/$BUCKET/" | sed "s/REPLACEBASEPATH/$BASE_PATH/")
+              echo "---PAYLOAD => $PAYLOAD"
+              # Step 1: Loop until the snapshot repository exists
+              until response=$(curl --silent --write-out "HTTPSTATUS:%{http_code}" \
+                  --request GET \
+                  --url "$ES_URL/_snapshot?pretty=" \
+                  --insecure \
+                  --header "$AUTH_HEADER" \
+                  --header "$USER_AGENT_HEADER") &&
+                  body=$(echo $response | sed -e 's/HTTPSTATUS\:.*//g') &&
+                  http_status=$(echo $response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://') &&
+                  [ $http_status -eq 200 ]; do
+                  echo "-----------"
+                  echo "$http_status"
+                  echo "$body"
+                  echo "-----------"
+                  echo "Snapshot repository not found or error occurred. Retrying in 1 minute..."
+                  sleep 60
+              done
+                  (echo $body | grep -q "\"$SNAPSHOT_REPO\"")
+                  if [ $? -eq 0 ]; then
+                      echo "-----------"
+                      echo "$http_status"
+                      echo "$body"
+                      echo "-----------"
+                      echo "Snapshot repository already exists....."
+                      exit 0
+                  fi
+
+              # Step 2: Create the snapshot repository
+              echo "Creating Snapshot repository ..."
+              create_response=$(curl --silent --write-out "HTTPSTATUS:%{http_code}" \
+                --request PUT \
+                --url "$ES_URL/_snapshot/$SNAPSHOT_REPO?pretty=" \
+                --insecure \
+                --header "$AUTH_HEADER" \
+                --header "Content-Type: application/json" \
+                --header "$USER_AGENT_HEADER" \
+                --data "$PAYLOAD")
+
+              # Extract response body and status
+              create_body=$(echo $create_response | sed -e 's/HTTPSTATUS\:.*//g')
+              create_http_status=$(echo $create_response | tr -d '\n' | sed -e 's/.*HTTPSTATUS://')
+
+              # Step 3: Check if the repository was created successfully
+              if [ $create_http_status -eq 200 ] && (echo $create_body | grep -q "\"acknowledged\" : true" || echo $create_body | grep -q "\"acknowledged\":true"); then
+                echo "Snapshot repository created successfully."
+                exit 0
+              else
+                echo "Failed to create snapshot repository. Response: $create_body"
+                exit 1
+              fi
+          securityContext:
+            allowPrivilegeEscalation: true
+            privileged: false
+            readOnlyRootFilesystem: false
+      restartPolicy: Never
+      terminationGracePeriodSeconds: 300
+      dnsPolicy: ClusterFirst
+      securityContext: { }
+---
+# cronjob for es snapshot backup to s3
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: elasticsearch-snapshot
+  namespace: saifty-flux
+spec:
+  concurrencyPolicy: Forbid
+  failedJobsHistoryLimit: 1
+  schedule: "0 0 */1 * *"  # At 00:00 on every day-of-month.
+  suspend: false
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: elasticsearch-snapshot
+              image: curlimages/curl  # Using curl image to trigger Elasticsearch API
+              imagePullPolicy: IfNotPresent
+              resources:
+                limits:
+                  cpu: 200m
+                  memory: 100Mi
+                requests:
+                  cpu: 100m
+                  memory: 50Mi
+              securityContext:
+                allowPrivilegeEscalation: true
+                privileged: false
+                readOnlyRootFilesystem: false
+              terminationMessagePath: /dev/termination-log
+              terminationMessagePolicy: File
+              command:
+                - "/bin/sh"
+                - "-c"
+                - |
+                  curl -X PUT "https://monolith-elasticsearch:9200/_snapshot/snapshot-s5-repo/snapshot-$(date +\%Y-\%m-\%d)?wait_for_completion=false" \
+                       --insecure \
+                       -H "Content-Type: application/json" \
+                       -H "Authorization: Basic ZWxhc3RpYzphYmNkMTIz" \
+                       -d '{ "ignore_unavailable": true, "include_global_state": false }'
+          dnsPolicy: ClusterFirst
+          restartPolicy: Never
+          schedulerName: default-scheduler
+          securityContext: { }
+          #serviceAccountName: postgres-pod
+          terminationGracePeriodSeconds: 300
+          #serviceAccountName: your-service-account-name  # Optional: Replace with appropriate service account

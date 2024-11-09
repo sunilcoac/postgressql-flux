@@ -1,0 +1,219 @@
+# ---
+# ### This custom PVC should be on same node where stackable nifi's core pvc are present
+# ### Apparently it's eu-central-1b.  
+# allowVolumeExpansion: true
+# apiVersion: storage.k8s.io/v1
+# kind: StorageClass
+# metadata:
+#   annotations:
+#     resources.gardener.cloud/delete-on-invalid-update: "true"
+#     resources.gardener.cloud/description: |-
+#       DO NOT EDIT - This resource is managed by gardener-resource-manager.
+#       Any modifications are discarded and the resource is returned to the original state.
+#     resources.gardener.cloud/origin: shoot--garden--aws-ha-eu2-a5bc5c8a-6b45-4294-bb69-4882118418d6-sap-landscape-live:shoot--kyma--c-82dcfa7/extension-controlplane-storageclasses
+#     storageclass.kubernetes.io/is-default-class: "false"
+#   creationTimestamp: "2024-04-18T14:49:05Z"
+#   labels:
+#     resources.gardener.cloud/managed-by: gardener
+#     shoot.gardener.cloud/no-cleanup: "true"
+#   name: nifi-custom-pvc
+# parameters:
+#   encrypted: "true"
+# provisioner: ebs.csi.aws.com
+# reclaimPolicy: Delete
+# volumeBindingMode: WaitForFirstConsumer
+# allowedTopologies:
+# - matchLabelExpressions:
+#   - key: topology.kubernetes.io/zone
+#     values:
+#     ## Check nifi pvc
+#     - eu-central-1b
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nifi-processor
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  # storageClassName: nifi-custom-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nifi-jar-files
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+  # storageClassName: nifi-custom-pvc
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: processorcopy
+spec:
+  volumes:
+    - name: nifi-processor
+      persistentVolumeClaim:
+        claimName: nifi-processor
+    - name: nifi-jar-files
+      persistentVolumeClaim:
+        claimName: nifi-jar-files
+  containers:
+    - name: copycontainer
+      image: alpine
+      command:
+        - tail
+        - "-f"
+        - "/dev/null"
+      volumeMounts:
+        - mountPath: "/volume"
+          name: nifi-processor
+        - mountPath: "/jar_files"
+          name: nifi-jar-files
+          # subPath: trino-jdbc-428.jar
+  initContainers:
+    - name: s3-downloader
+      image: amazon/aws-cli
+      imagePullPolicy: IfNotPresent
+      # LATER : use aws s3 sync .. --exclude "*" --include ".nar" --include ".jar"
+      command:
+      - /bin/sh
+      - -ce
+      - |
+        aws s3 cp s3://saifty-ai-models/robots-service-nar-0.0.1.nar  /volume/ --region ${REGION} &&
+        aws s3 cp s3://saifty-ai-models/robots-nar-0.0.1.nar  /volume/ --region ${REGION} &&
+        aws s3 cp s3://saifty-ai-models/robots-service-api-nar-0.0.1.nar  /volume/ --region ${REGION} &&
+        # Choice of bin is deliberate. 
+        # Wanted to check if file could be mounted to existing folder in a container. 
+        aws s3 cp s3://saifty-ai-models/trino_extra/trino-jdbc-428.jar  /bin/trino-jdbc-428.jar --region ${REGION}
+
+      volumeMounts:
+        - mountPath: "/volume"
+          name: nifi-processor
+        - mountPath: "/bin/trino-jdbc-428.jar"
+          name: nifi-jar-files
+          subPath: trino-jdbc-428.jar
+      envFrom:
+        - secretRef:
+            name: aws-s3-credentials
+      env:
+      - name: REGION
+        value: eu-central-1 # change this if ECR repo is in a different region
+---
+apiVersion: zookeeper.stackable.tech/v1alpha1
+kind: ZookeeperCluster
+metadata:
+  name: simple-zk
+spec:
+  image:
+    productVersion: 3.8.0
+    stackableVersion: "23.7.0"
+  servers:
+    roleGroups:
+      default:
+        replicas: 3
+    podOverrides:
+      spec:
+        containers:
+        - name: zookeeper
+          resources:
+            requests:
+              cpu: 0m
+              memory: 0Mi
+        initContainers:
+        - name: prepare
+          resources:
+            requests:
+              cpu: 0m
+              memory: 0Mi
+---
+apiVersion: zookeeper.stackable.tech/v1alpha1
+kind: ZookeeperZnode
+metadata:
+  name: simple-nifi-znode
+spec:
+  clusterRef:
+    name: simple-zk
+---
+apiVersion: nifi.stackable.tech/v1alpha1
+kind: NifiCluster
+metadata:
+  name: simple-nifi
+spec:
+  image:
+    productVersion: 1.21.0
+    stackableVersion: "23.7.0"
+    # pullSecrets:
+    #   - name: regcred
+    # custom: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-microbrains:version-bump-0.0.9-nifi-v1.21.0
+  clusterConfig:
+    authentication:
+      method:
+        singleUser:
+          adminCredentialsSecret: nifi-admin-credentials
+    listenerClass: external-unstable
+    sensitiveProperties:
+      keySecret: nifi-sensitive-property-key
+      autoGenerate: true
+    zookeeperConfigMapName: simple-nifi-znode
+    extraVolumes: 
+      - name: nifi-processor
+        persistentVolumeClaim:
+          claimName: nifi-processor
+  nodes:
+    configOverrides:
+      nifi.properties:
+        nifi.nar.library.directory.myCustomLibs: "../userdata/nifi-processor/"
+        nifi.web.proxy.host: simple-nifi.saifty-flux.svc.cluster.local:8443, nifi-dev.heraeus.coacapp.de
+      bootstrap.conf:
+        java.arg.2: -Xms512m
+    envOverrides:
+      JAVA_TOOL_OPTIONS: "-Dfile.encoding=utf8"
+    roleGroups:
+      default:
+        replicas: 1
+        # config:
+        #   resources:
+        #     memory:
+        #       limit: 10Gi
+        envOverrides:
+          JAVA_TOOL_OPTIONS: "-Dfile.encoding=utf8"
+    podOverrides:
+      spec:
+        initContainers:
+        - name: prepare
+          resources:
+            requests:
+              cpu: 0m
+              memory: 0Mi
+        containers:
+        - name: nifi
+          image: docker.stackable.tech/stackable/nifi:1.21.0-stackable23.7.0
+          volumeMounts:
+          - mountPath: /custom_jars
+            name: nifi-jar-files
+          command:
+            - /bin/sh
+            - -ce
+            - |
+              cp /custom_jars/trino-jdbc-428.jar/trino-jdbc-428.jar /stackable/nifi/lib/trino-jdbc-428.jar &&
+              bin/nifi.sh run
+          resources:
+            limits:
+              cpu: 10000m # Just a Max limit on CPU for nifi ..
+              memory: 20Gi
+            requests:
+              cpu: 0m
+              memory: 0Mi
+
+        volumes:
+        - name: nifi-jar-files
+          persistentVolumeClaim:
+            claimName: nifi-jar-files

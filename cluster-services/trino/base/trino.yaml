@@ -1,0 +1,159 @@
+---
+apiVersion: hive.stackable.tech/v1alpha1
+kind: HiveCluster
+metadata:
+  name: hive-postgres-s3
+spec:
+  image:
+    productVersion: 3.1.3
+    stackableVersion: 23.7.0
+  clusterConfig:
+    database:
+      connString: jdbc:postgresql://postgres.saifty-flux.svc.cluster.local:5432/hive
+      user: hive
+      password: otBbwtnvnR7w8eJuKjTvwB0JAGZ3Mk7k5RQp1zkoYFA2JdrOHg5xmUeHZZ23Ohnj
+      dbType: postgres
+    s3:
+      inline:
+        host: minio
+        port: 9000
+        accessStyle: Path
+        credentials:
+          secretClass: hive-s3-secret-class
+  metastore:
+    roleGroups:
+      default:
+        replicas: 1
+---
+apiVersion: s3.stackable.tech/v1alpha1
+kind: S3Connection
+metadata:
+  name: minio
+spec:
+  host: minio
+  port: 9000
+  accessStyle: Path
+  credentials:
+    secretClass: hive-s3-secret-class
+---
+apiVersion: secrets.stackable.tech/v1alpha1
+kind: SecretClass
+metadata:
+  name: hive-s3-secret-class
+spec:
+  backend:
+    k8sSearch:
+      searchNamespace:
+        pod: {}
+
+---
+apiVersion: authentication.stackable.tech/v1alpha1
+kind: AuthenticationClass
+metadata:
+  name: simple-trino-users
+spec:
+  provider:
+    static:
+      userCredentialsSecret:
+        name: trino-users
+---
+apiVersion: trino.stackable.tech/v1alpha1
+kind: TrinoCatalog
+metadata:
+  name: hive
+  labels:
+    trino: trino-coac
+spec:
+  connector:
+    hive:
+      metastore:
+        configMap: hive-postgres-s3
+      s3:
+        reference: minio
+
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: trino-spill
+# spec:
+#   storageClassName: gp2 
+#   accessModes:
+#     - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 50Gi
+---
+apiVersion: trino.stackable.tech/v1alpha1
+kind: TrinoCluster
+metadata:
+  name: trino-coac
+spec:
+  image:
+    productVersion: "414"
+    stackableVersion: "23.7.0"
+  clusterConfig:
+    catalogLabelSelector:
+      matchLabels:
+        trino: trino-coac
+    authentication:
+      - authenticationClass: simple-trino-users
+  coordinators:
+    roleGroups:
+      default:
+        replicas: 1
+    config:
+      resources:
+        cpu:
+          max: "4" # CPU resources that can be used at a maximum
+          min: "1" # Guaranteed CPU resources
+        memory:
+          limit: 2Gi # Available RAM
+  workers:
+    config:
+      resources:
+        cpu:
+          max: "4"
+          min: "1"
+        memory:
+          limit: 12Gi
+    roleGroups:
+      default:
+        replicas: 4
+    podOverrides:
+      spec:
+        containers:
+        - name: trino
+          resources:
+            limits:
+              # cpu: null 
+              memory: 12Gi
+            requests:
+              cpu: 0m
+              memory: 0Mi
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: "trino-heraeus-prod-ing"
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-production
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTPS"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: "trino-prod.heraeus.coacapp.de"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: trino-coac-coordinator
+                port:
+                  number: 8443
+
+  tls:
+    - hosts:
+        - "trino-prod.heraeus.coacapp.de"
+      secretName: trino-heraeus-prod-tls

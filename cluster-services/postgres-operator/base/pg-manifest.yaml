@@ -1,0 +1,67 @@
+apiVersion: "acid.zalan.do/v1"
+kind: postgresql
+metadata:
+  name: postgresql
+spec:
+  teamId: "acid"
+  volume:
+    size: 50Gi
+  numberOfInstances: 2
+  users:
+    postgres:  # database owner
+    - superuser
+    - createdb
+    echa_dev:
+    - createdb
+    extraction:
+    - createdb
+    library:
+    - createdb
+    approvals:
+    - createdb
+    filestorage:
+    - createdb
+    monolith:
+    - createdb
+    robots_wrapper:
+    - createdb
+    rate_limiter:
+    - createdb
+    query_builder:
+    - createdb
+    hive:
+    - createdb
+  databases:
+    echa_dev: echa_dev # dbname: owner
+    extraction: extraction
+    library: library
+    approvals: approvals
+    filestorage: filestorage
+    robots_wrapper: robots_wrapper
+    monolith: monolith
+    rate_limiter: rate_limiter
+    query_builder: query_builder
+    hive: hive
+  # preparedDatabases:
+  #   bar: {}
+  postgresql:
+    version: "12"
+  resources:
+    limits:
+      cpu: "0"
+      memory: 4Gi
+    requests:
+      cpu: "0"
+      memory: "0"
+  # patroni:
+  #   pg_hba:
+  #     - host     all             all             0.0.0.0/0               md5
+  #     - host     all             all             ::/0                    md5
+  #     - local    all             all                                     md5
+  #     - host     all             all        127.0.0.1/32                 md5
+  #     - host     all             all        ::1/128                      md5
+
+  enableLogicalBackup: false
+  env:
+    - name: WAL_S3_BUCKET
+      value: ""

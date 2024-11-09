@@ -1,0 +1,11 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: nginx-ingress
+spec:
+  ## Dev Cluster Values
+  values:
+    controller.kind : DaemonSet
+    controller.daemonset.useHostPort : true
+    rbac.create : true
+    replicaCount: 1

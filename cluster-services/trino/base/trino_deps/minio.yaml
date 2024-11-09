@@ -1,0 +1,82 @@
+### These are the dependencies to setup Hive
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: stackable-stable-repo
+spec:
+  interval: 24h
+  url: https://repo.stackable.tech/repository/helm-stable/
+
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: minio-repo
+spec:
+  interval: 24h
+  url: https://charts.min.io/
+
+
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: minio
+spec:
+  interval: 30m # Check the changes in this release-file itself every 30 mins
+  chart:
+    spec:
+      chart: minio
+      version: "4.0.2"
+      sourceRef:
+        kind: HelmRepository
+        name: minio-repo
+      interval: 12h # Check for changes in the Chart every 12h
+      
+  timeout: 40m # Installation of a component shouldn't exceed this
+
+  values:
+    mode: standalone
+    replicas: 1 # Must be even and > 4 for mode=distributed !
+    persistence:
+      enabled: True
+      size: 100Gi
+    buckets:
+    - name: hive
+      policy: none
+    users:
+      - accessKey: hive
+        secretKey: k1NDsyWZ
+        policy: readwrite
+    resources:
+      requests:
+        memory: 0m
+        cpu: 0mi     
+    environment:
+      ## Please refer for comprehensive list https://min.io/docs/minio/linux/reference/minio-server/minio-server.html
+      # MINIO_SUBNET_LICENSE: "License key obtained from https://subnet.min.io"
+      # MINIO_BROWSER: "off"
+      MINIO_COMPRESSION_ENABLE: "on"
+      MINIO_COMPRESSION_EXTENSIONS: "*"
+      MINIO_COMPRESSION_MIME_TYPES: "*"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: minio-lb
+spec:
+  type: LoadBalancer
+  externalTrafficPolicy: Cluster
+  selector:
+    app: minio
+  ports:
+    - name: tcp-port
+      protocol: TCP
+      port: 9001
+      targetPort: 9001
+    - name: concole-tcp-port
+      protocol: TCP
+      port: 9000
+      targetPort: 9000
+

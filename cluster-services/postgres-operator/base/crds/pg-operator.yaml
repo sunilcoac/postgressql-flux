@@ -1,0 +1,25 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: postgres-operator-charts
+spec:
+  interval: 24h
+  url: https://opensource.zalando.com/postgres-operator/charts/postgres-operator
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: postgres-operator
+spec:
+  interval: 30m # Check the changes in this release-file itself every 30 mins
+  chart:
+    spec:
+      chart: postgres-operator
+      # version: 4.6.x
+      sourceRef:
+        kind: HelmRepository
+        name: postgres-operator-charts
+      interval: 12h # Check for changes in the Chart every 12h
+      
+  timeout: 20m # Installation of a component shouldn't exceed this

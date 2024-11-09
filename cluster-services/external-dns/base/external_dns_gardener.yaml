@@ -1,0 +1,297 @@
+---
+# Source: external-dns-management/templates/serviceaccount.yaml
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: dns-controller-manager
+  namespace: dns
+  labels:
+    helm.sh/chart: external-dns-management-0.1.0
+    app.kubernetes.io/name: external-dns-management
+    app.kubernetes.io/instance: external-dns-gardener
+    app.kubernetes.io/managed-by: Helm
+---
+# Source: external-dns-management/templates/clusterrole.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: dns-controller-manager
+  labels:
+    helm.sh/chart: external-dns-management-0.1.0
+    app.kubernetes.io/name: external-dns-management
+    app.kubernetes.io/instance: external-dns-gardener
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - services
+  - services/finalizers
+  - secrets
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - extensions
+  - "networking.k8s.io"
+  resources:
+  - ingresses
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - "gateway.networking.k8s.io"
+  resources:
+  - gateways
+  - httproutes
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - "networking.istio.io"
+  resources:
+  - gateways
+  - virtualservices
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+- apiGroups:
+  - dns.gardener.cloud
+  resources:
+  - dnsproviders
+  - dnsproviders/status
+  - dnsentries
+  - dnsentries/status
+  - dnsannotations
+  - dnsannotations/status
+  - dnsowners
+  - dnsowners/status
+  - dnshostedzonepolicies
+  - dnshostedzonepolicies/status
+  - dnslocks
+  - dnslocks/status
+  - remoteaccesscertificates
+  - remoteaccesscertificates/status
+  verbs:
+  - get
+  - list
+  - update
+  - watch
+  - create
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - events
+  verbs:
+  - create
+  - patch
+- apiGroups:
+  - apiextensions.k8s.io
+  resources:
+  - customresourcedefinitions
+  verbs:
+  - get
+  - list
+  - update
+  - create
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - "cluster-identity"
+  verbs:
+  - get
+---
+# Source: external-dns-management/templates/clusterrolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: dns-controller-manager
+  labels:
+    helm.sh/chart: external-dns-management-0.1.0
+    app.kubernetes.io/name: external-dns-management
+    app.kubernetes.io/instance: external-dns-gardener
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: dns-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: dns-controller-manager
+  namespace: dns
+---
+# Source: external-dns-management/templates/role.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: dns-controller-manager
+  namespace: dns
+  labels:
+    helm.sh/chart: external-dns-management-0.1.0
+    app.kubernetes.io/name: external-dns-management
+    app.kubernetes.io/instance: external-dns-gardener
+    app.kubernetes.io/managed-by: Helm
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  resourceNames:
+  - dns-controller-manager-controllers
+  verbs:
+  - get
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - configmaps
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+  - leases
+  verbs:
+  - create
+- apiGroups:
+  - coordination.k8s.io
+  resources:
+   - leases
+  resourceNames:
+  - dns-controller-manager-controllers
+  verbs:
+  - get
+  - watch
+  - update
+---
+# Source: external-dns-management/templates/rolebinding.yaml
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: dns-controller-manager
+  namespace: dns
+  labels:
+    helm.sh/chart: external-dns-management-0.1.0
+    app.kubernetes.io/name: external-dns-management
+    app.kubernetes.io/instance: external-dns-gardener
+    app.kubernetes.io/managed-by: Helm
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: dns-controller-manager
+subjects:
+- kind: ServiceAccount
+  name: dns-controller-manager
+  namespace: dns
+---
+# Source: external-dns-management/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dns-controller-manager
+  namespace: dns
+  labels:
+    helm.sh/chart: external-dns-management-0.1.0
+    app.kubernetes.io/name: external-dns-management
+    app.kubernetes.io/instance: external-dns-gardener
+    app.kubernetes.io/managed-by: Helm
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  revisionHistoryLimit: 5
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: external-dns-management
+      app.kubernetes.io/instance: external-dns-gardener
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/scheme: http
+      labels:
+        app.kubernetes.io/name: external-dns-management
+        app.kubernetes.io/instance: external-dns-gardener
+        networking.gardener.cloud/to-dns: allowed
+        networking.gardener.cloud/to-runtime-apiserver: allowed
+        networking.gardener.cloud/to-public-networks: allowed
+        networking.gardener.cloud/to-private-networks: allowed
+    spec:
+      hostIPC: false
+      hostNetwork: false
+      hostPID: false
+      securityContext:
+        fsGroup: 65534
+        runAsGroup: 65534
+        runAsNonRoot: true
+        runAsUser: 65534
+      containers:
+      - name: dns-controller-manager
+        image: "europe-docker.pkg.dev/gardener-project/public/dns-controller-manager:v0.18.6"
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
+          privileged: false
+          readOnlyRootFilesystem: true
+        args:
+        - --name=dns-controller-manager
+        - --identifier=sap-btp-kyma-heraeus
+        - --remote-access-client-id=sap-btp-kyma-heraeus
+        - --disable-namespace-restriction=true
+        ### start generated configuration
+        - --controllers=all
+        - --lease-duration=30s
+        - --provider-types=aws-route53
+        - --server-port-http=8080
+        - --ttl=120
+        ### end generated configuration
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+            scheme: HTTP
+          initialDelaySeconds: 30
+          timeoutSeconds: 5
+        resources:
+          limits:
+            cpu: 200m
+            memory: 128Mi
+          requests:
+            cpu: 100m
+            memory: 64Mi
+      serviceAccountName: dns-controller-manager
+      imagePullSecrets:
+---
+apiVersion: dns.gardener.cloud/v1alpha1
+kind: DNSProvider
+metadata:
+  name: aws
+  namespace: dns
+spec:
+  type: aws-route53
+  secretRef:
+    name: aws-credentials-route53
+  domains:
+    include:
+    # this must be replaced with a (sub)domain of the hosted zone
+    - heraeus.coacapp.de
+

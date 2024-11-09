@@ -1,0 +1,10 @@
+{
+    "policies": ["default", "heraeus-dev"],
+    "meta": {
+      "cluster": "heraeus"
+    },
+    "ttl": "768h",
+    "renewable": true,
+    "period" : "768h",
+    "display_name" : "periodic_token_heraeus_dev"
+}

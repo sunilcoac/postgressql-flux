@@ -1,0 +1,8 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: stackable-stable-repo
+spec:
+  interval: 24h
+  url: https://repo.stackable.tech/repository/helm-stable/

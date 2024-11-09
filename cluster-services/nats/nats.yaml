@@ -1,0 +1,72 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: nats-helm-repo
+spec:
+  interval: 24h
+  url: https://nats-io.github.io/k8s/helm/charts/
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: nats
+spec:
+  interval: 30m
+  chart:
+    spec:
+      chart: nats
+      sourceRef:
+        kind: HelmRepository
+        name: nats-helm-repo
+      interval: 12h
+  
+  timeout: 40m # Installation of a component shouldn't exceed this
+
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+
+  install:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+
+  values:
+    config:
+      cluster:
+        enabled: false
+        port: 6222
+        # must be 2 or higher when jetstream is enabled
+        replicas: 2
+
+        # apply to generated route URLs that connect to other pods in the StatefulSet
+        routeURLs:
+          # if both user and password are set, they will be added to route URLs
+          # and the cluster authorization block
+          user:
+          password:
+
+      jetstream:
+        enabled: true
+
+      nats:
+        port: 4222
+
+    service:
+      enabled: true
+      ports:
+        monitor:
+          enabled: true
+
+    promExporter:
+      podMonitor:
+        enabled: true
+    
+    ports: 
+      monitor:
+        enabled: true
+
+    natsBox:
+      enabled: true

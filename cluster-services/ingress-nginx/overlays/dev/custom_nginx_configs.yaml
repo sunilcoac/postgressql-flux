@@ -1,0 +1,27 @@
+# https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
+# provide nginx configs here
+# NOTE : this config must be creatred before the pod itself.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  # annotations:
+  #   meta.helm.sh/release-name: ingress-nginx
+  #   meta.helm.sh/release-namespace: default
+  labels:
+    app.kubernetes.io/component: controller
+    app.kubernetes.io/instance: ingress-nginx
+    app.kubernetes.io/name: ingress-nginx
+    app.kubernetes.io/part-of: ingress-nginx
+    # app.kubernetes.io/managed-by: Helm
+    # IF nginx doesn't work, maybe this is the culprit
+    # app.kubernetes.io/version: 1.9.4
+  name: ingress-nginx-controller
+  namespace: default
+data:
+  allow-snippet-annotations: "false"
+  proxy-body-size: "50m"
+  proxy-connect-timeout: "300"
+  proxy-read-timeout: "300"
+  proxy-send-timeout: "300"
+  use-proxy-protocol: "false"
+  client-body-buffer-size: "50m"

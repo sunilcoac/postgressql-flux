@@ -1,0 +1,15 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: vault-periodic-token-es
+spec:
+  refreshInterval: "15s"
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: periodic-token-vault
+    creationPolicy: Owner
+  dataFrom:
+  - extract:
+      key: vault_periodic_token

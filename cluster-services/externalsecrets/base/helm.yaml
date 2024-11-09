@@ -1,0 +1,39 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta1
+kind: HelmRepository
+metadata:
+  name: external-secrets-repo
+spec:
+  interval: 24h # Update the Artifact every 24h
+  url: https://charts.external-secrets.io
+---
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: external-secrets
+spec:
+  interval: 30m # Check the changes in this release-file itself every 30 mins
+  chart:
+    spec:
+      chart: external-secrets
+      # version: 4.6.x
+      sourceRef:
+        kind: HelmRepository
+        name: external-secrets-repo
+      interval: 12h # Check for changes in the Chart every 12h
+  
+  timeout: 20m # Installation of a component shouldn't exceed this
+
+  upgrade:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+  install:
+    remediation:
+      retries: 3
+      remediateLastFailure: true
+    
+  ## Provide Values for Chart
+  values:
+    installCRDs: true
+    version: "0.5.9"

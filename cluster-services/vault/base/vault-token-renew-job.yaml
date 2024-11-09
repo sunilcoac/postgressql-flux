@@ -1,0 +1,47 @@
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: vault-token-renew
+spec:
+  suspend: false
+  schedule: "0 0 */15 * *"   # Runs every 15 days at midnight
+  failedJobsHistoryLimit: 1
+  successfulJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+          - image: ghcr.io/fluxcd/flux-cli:v0.25.2
+            name: renew-vault-token
+            imagePullPolicy: IfNotPresent
+            # securityContext:
+            #   runAsNonRoot: true
+            #   runAsUser: 1000
+            #   allowPrivilegeEscalation: false
+            #   capabilities:
+            #     drop: ["ALL"]
+            #   seccompProfile:
+            #     type: RuntimeDefault
+            envFrom:
+             - secretRef:
+                 name: periodic-token-vault
+            command:
+            - /bin/sh
+            - -ce
+            - |-
+              apk --no-cache add curl
+              echo "Renewing Periodic token"
+              curl \
+              --header "X-Vault-Token: $period_token" \
+              --request POST \
+              https://vaultui-central.saifty.coacapp.de/v1/auth/token/renew-self
+              
+              echo "Unsealing Vault"
+              curl \
+              --request POST \
+              --header "Content-Type: application/json" \
+              --data "{\"key\": \"$unseal_key\"}" \
+              https://vaultui-central.saifty.coacapp.de/v1/sys/unseal              

@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: external-dns
+  labels:
+    toolkit.fluxcd.io/tenant: dev-team
+
+
+## BTP environment installs a gardener's dns controller in this namespace.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: dns
+  labels:
+    toolkit.fluxcd.io/tenant: dev-team

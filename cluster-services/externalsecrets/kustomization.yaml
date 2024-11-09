@@ -1,0 +1,28 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: saifty-flux
+resources:
+  - clustersecretstore.yaml
+  - aws-credentials-external-secrets.yaml
+  - approvals-external-secrets.yaml
+  - av-server-external-secrets.yaml
+  - echa-dev-external-secrets.yaml
+  - extraction-external-secrets.yaml
+  - federation-client-external-secrets.yaml
+  - frontend-external-secrets.yaml
+  - filestorage-external-secrets.yaml
+  - library-backend-external-secrets.yaml
+  - monolith-external-secrets.yaml
+  - notifications-external-secrets.yaml
+  - rate-limiter-external-secrets.yaml
+  - robots-wrapper-external-secrets.yaml
+  - nifi-admin-credentials.yaml
+  - sap-gateway-external-secrets.yaml
+  - phrases-external-secrets.yaml
+  - aws-s3-external-secrets.yaml
+  - helm-repo-external-secrets.yaml
+  - query-builder-external-secrets.yaml
+  - vault-period-token.yaml
+  - database-backup-external-secrets.yaml
+  - sds-ocr-external-secrets.yaml
+  - trino-users.yaml

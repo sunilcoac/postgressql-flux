@@ -1,0 +1,15 @@
+apiVersion: external-secrets.io/v1beta1
+kind: ExternalSecret
+metadata:
+  name: trino-users-external-secrets
+spec:
+  refreshInterval: "3600s"
+  secretStoreRef:
+    name: vault-backend
+    kind: ClusterSecretStore
+  target:
+    name: trino-users
+    creationPolicy: Owner
+  dataFrom:
+  - extract:
+      key: trino-users
