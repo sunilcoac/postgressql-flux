@@ -1,0 +1,37 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: frontend
+spec:
+  chart:
+    spec:
+      chart: frontend
+  ## MODIFT VALUES HERE !
+  values:
+    image:
+      repository: "050565211916.dkr.ecr.eu-central-1.amazonaws.com/saifty-frontend-general" # {"$imagepolicy": "flux-system:frontend-image-policy:name"}
+      # tag: "1.2.68-release-1729669951193" # {"$imagepolicy": "flux-system:frontend-image-policy:tag"}
+      tag: "1.2.77-develop-GITHASH-1730257185164"
+    packageSecretRef: "frontend-secrets"
+    resources:
+      limits:
+        cpu: null
+      requests:
+        cpu: null
+        memory: 0Mi
+    ## Ingress 
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: frontend-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: frontend-tls
+          hosts:
+            - frontend-dev.heraeus.coacapp.de

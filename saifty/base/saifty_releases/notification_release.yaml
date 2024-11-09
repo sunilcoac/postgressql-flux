@@ -1,0 +1,84 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: notification-service
+spec:
+  chart:
+    spec:
+      chart: notification-service
+  ## MODIFY VALUES
+  values:
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-notification-service # {"$imagepolicy": "flux-system:notification-service-image-policy:name"}
+      tag: "1.2.68-release-983c2f4744-1729687330176" # {"$imagepolicy": "flux-system:notification-service-image-policy:tag"}
+    springCloudConfigEnabled: "false"
+    packageSecretRef: "notifications-secrets"
+
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: notification-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: notification-tls
+          hosts:
+            - notification-dev.heraeus.coacapp.de
+    resources:
+      limits:
+        cpu: null
+        memory: 1Gi
+      requests:
+        cpu: null
+        memory: 0Mi
+    redis:
+      master:
+        resources:
+          limits:
+            cpu: null
+          requests:
+            cpu: null
+            memory: 0Mi
+      replica:
+        resources:
+          limits:
+            cpu: null
+          requests:
+            cpu: null
+            memory: 0Mi
+    livenessProbe:
+      failureThreshold: 2
+      httpGet:
+        path: /manage/health/liveness
+        port: 6000
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1
+
+    readinessProbe:
+      httpGet:
+        path: /manage/health/liveness
+        port: 6000
+        scheme: HTTP
+      initialDelaySeconds: 15
+      periodSeconds: 60
+      failureThreshold: 5
+      successThreshold: 1
+      timeoutSeconds: 1
+    
+    startupProbe:
+      failureThreshold: 30
+      httpGet:
+        path: /manage/health/liveness
+        port: 6000
+        scheme: HTTP
+      periodSeconds: 10
+      successThreshold: 1
+      timeoutSeconds: 1

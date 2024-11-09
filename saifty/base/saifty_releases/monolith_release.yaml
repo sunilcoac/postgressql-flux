@@ -1,0 +1,107 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: monolith
+spec:
+  chart:
+    spec:
+      chart: monolith
+  ## MODIFT VALUES HERE !
+  values:
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-data-assets-backend-core # {"$imagepolicy": "flux-system:monolith-image-policy:name"}
+      tag: "1.2.68.1-release-bbeef5c270-1729751237072" # {"$imagepolicy": "flux-system:monolith-image-policy:tag"}
+      #tag: "837-develop-c286c55479-1728455929552"
+    springCloudConfigEnabled: "false"
+    dbCredentialSecret: "monolith.postgresql.credentials.postgresql.acid.zalan.do"
+    packageSecretRef: "monolith-secrets"
+    resources:
+      # We usually recommend not to specify default resources and to leave this as a conscious
+      # choice for the user. This also increases chances charts run on environments with little
+      # resources, such as Minikube. If you do want to specify resources, uncomment the following
+      # lines, adjust them as necessary, and remove the curly braces after 'resources:'.
+      limits:
+        cpu: null
+        memory: 4Gi
+      requests:
+        cpu: 0m
+        memory: 0Mi
+    elasticsearch:
+      extraEnvVars:
+        - name: BACKUP_AWS_ACCESS_KEY
+          valueFrom:
+            secretKeyRef:
+              key: BACKUP_AWS_ACCESS_KEY_ID
+              name: database-backup-secrets
+        - name: BACKUP_AWS_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              key: BACKUP_AWS_SECRET_ACCESS_KEY
+              name: database-backup-secrets
+      initScripts:
+        install_repository_s3.sh: "#! /usr/bin/env sh\necho \"-----repository-s3 installation start-----\"\nelasticsearch-plugin install repository-s3\necho \"-----repository-s3 installed-----\"\necho \"-----es_s3_kube_keystore_add installation start-----\"\necho \"---BACKUP_AWS_ACCESS_KEY -> $BACKUP_AWS_ACCESS_KEY\"\necho \"$BACKUP_AWS_ACCESS_KEY\" | elasticsearch-keystore add --stdin --force s3.client.default.access_key\necho \"$BACKUP_AWS_SECRET_KEY\" | elasticsearch-keystore add --stdin --force s3.client.default.secret_key  \necho \"-----es_s3_kube_keystore_addinstalled-----\"\n"
+      master:
+        resources:
+          limits:
+            cpu: null
+            memory: 1Gi
+          requests:
+            cpu: 0m
+            memory: 0Mi
+        replicaCount: 2
+        persistence:
+          enabled: true
+          size: 8Gi
+          # heapSize: 2m
+      coordinating:
+        resources:
+          limits:
+            cpu: null
+            memory: 2Gi
+          requests:
+            cpu: 0m
+            memory: 0Mi
+        replicaCount: 1
+        heapSize: 1024m
+        persistence:
+          enabled: true
+          size: 8Gi
+      ingest:
+        resources:
+          limits:
+            memory: 2Gi
+          requests:
+            cpu: 0m
+            memory: 0Mi
+        replicaCount: 1
+        persistence:
+          enabled: true
+          size: 8Gi
+      data:
+        resources:
+          limits:
+            memory: 8Gi
+          requests:
+            cpu: 0m
+            memory: 0Mi
+        heapSize: 4096m
+        replicaCount: 2
+        persistence:
+          enabled: true
+          size: 8Gi
+    ## Ingress 
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: monolith-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: monolith-tls
+          hosts:
+            - monolith-dev.heraeus.coacapp.de

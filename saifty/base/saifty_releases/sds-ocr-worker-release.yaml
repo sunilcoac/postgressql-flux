@@ -1,0 +1,25 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: sds-ocr-worker
+spec:
+  chart:
+    spec:
+      chart: sds-ocr-worker
+  ## ADD CHART VALUES HERE !
+  values:
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/sds-ocr-worker # {"$imagepolicy": "flux-system:sds-ocr-image-policy:name"}
+      tag: 0.0.1-develop-5934432508af8c2613f62a7c0a7fed2dc16e625c-1722500728 # {"$imagepolicy": "flux-system:sds-ocr-image-policy:tag"}
+    dbCredentialSecret: ""
+    packageSecretRef: "sds-ocr-secrets"
+    ## Ingress 
+    ingress:
+      enabled: false
+    resources:
+      limits:
+        cpu: 4000m
+        memory: 8Gi
+      requests:
+        cpu: 0m
+        memory: 0Mi

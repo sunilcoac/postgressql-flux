@@ -1,0 +1,28 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: federation-server
+spec:
+  chart:
+    spec:
+      chart: federation-server
+  ## MODIFY VALUES
+  values:
+    springProfilesActive: "server,dev"
+    natsSpringServer: "nats://nats.nats.svc.cluster.local:4222"
+
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: federation-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: federation-tls
+          hosts:
+            - federation-dev.heraeus.coacapp.de

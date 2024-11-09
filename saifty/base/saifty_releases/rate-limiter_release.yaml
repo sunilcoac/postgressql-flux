@@ -1,0 +1,44 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: rate-limiter
+spec:
+  chart:
+    spec:
+      chart: rate-limiter
+  ## MODIFY VALUES
+  values:
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-limit-validator-core # {"$imagepolicy": "flux-system:rate-limiter-image-policy:name"}
+      tag: "1.2.23-release-f0ca512a93-1727331540465" # {"$imagepolicy": "flux-system:rate-limiter-image-policy:tag"}
+      #tag: "142-develop-f0ca512a93-1727331540465"
+    springCloudConfigEnabled: "false"
+    dbCredentialSecret: "rate-limiter.postgresql.credentials.postgresql.acid.zalan.do"
+    packageSecretRef: "rate-limiter-secrets"
+    resources:
+      limits:
+        cpu: null
+        memory: 1Gi
+      requests:
+        cpu: null
+        memory: 0Mi
+    # Ingress 
+    ingress:
+      enabled: false
+    redis:
+      master:
+        resources:
+          limits:
+            cpu: null
+            memory: 2Gi
+          requests:
+            cpu: null
+            memory: 0Mi
+      replica:
+        resources:
+          limits:
+            cpu: null
+            memory: 2Gi
+          requests:
+            cpu: null
+            memory: 0Mi

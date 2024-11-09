@@ -1,0 +1,38 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: sap-gateway
+spec:
+  chart:
+    spec:
+      chart: sap-gateway
+  ## MODIFY VALUES
+  values:
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-saifty-sap-gateway # {"$imagepolicy": "flux-system:sap-gateway-image-policy:name"}
+      tag: "694-heraeus-prody-fix-0295b03cf4-1729592969657" # {"$imagepolicy": "flux-system:sap-gateway-image-policy:tag"}
+    packageSecretRef: "sap-gateway-secrets"
+    sapCertSecretName: "sap-gateway-test-cert" # in exsi, we manually create this secret that holds the certificate. in heraeus, we use vault.
+    sapCertificatePropsFolder: "/certs/"
+    resources:
+      limits:
+        cpu: null
+        memory: 3Gi
+      requests:
+        cpu: null
+        memory: 0Mi
+    # Ingress 
+    ingress:
+      enabled: true
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: sap-gateway-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: sap-gateway-tls
+          hosts:
+            - sap-gateway-dev.heraeus.coacapp.de

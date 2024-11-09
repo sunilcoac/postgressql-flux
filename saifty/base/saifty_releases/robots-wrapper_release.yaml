@@ -1,0 +1,37 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: robots-wrapper
+spec:
+  chart:
+    spec:
+      chart: robots-wrapper
+  ## ADD CHART VALUES HERE !
+  values:
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/robots-wrapper-api # {"$imagepolicy": "flux-system:robots-wrapper-image-policy:name"}
+      tag: 1.2.26-release-259e76e8b9-1730209848 # {"$imagepolicy": "flux-system:robots-wrapper-image-policy:tag"}
+    dbCredentialSecret: "robots-wrapper.postgresql.credentials.postgresql.acid.zalan.do"
+    packageSecretRef: "robots-wrapper-secrets"
+    resources:
+      limits:
+        cpu: null
+      requests:
+        cpu: null
+        memory: 0Mi
+    ## Ingress 
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: robots-wrapper-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: robots-wrapper-tls
+          hosts:
+            - robots-wrapper-dev.heraeus.coacapp.de

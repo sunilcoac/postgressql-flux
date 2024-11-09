@@ -1,0 +1,10 @@
+---
+apiVersion: source.toolkit.fluxcd.io/v1beta2
+kind: HelmRepository
+metadata:
+  name: saifty-helm-repo
+spec:
+  interval: 24h
+  secretRef:
+    name: saifty-helm-repo-secret
+  url: https://raw.githubusercontent.com/coac-gmbh/saifty-helm-charts/gh-pages/

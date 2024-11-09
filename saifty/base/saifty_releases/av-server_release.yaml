@@ -1,0 +1,25 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: av-server
+spec:
+  chart:
+    spec:
+      chart: av-server
+  ## MODIFY VALUES HERE !
+  values:
+    springCloudConfigEnabled: "false"
+    image:
+      repository: 050565211916.dkr.ecr.eu-central-1.amazonaws.com/av-server # {"$imagepolicy": "flux-system:av-server-image-policy:name"}
+      tag: "1.2.11-release-c8cafc182b-1718969340396" # {"$imagepolicy": "flux-system:av-server-image-policy:tag"}
+    packageSecretRef: "av-server-secrets"
+    ## Ingress 
+    ingress:
+      enabled: false
+    resources:
+      limits:
+        cpu: null
+        memory: 3Gi
+      requests:
+        cpu: null
+        memory: 0Mi

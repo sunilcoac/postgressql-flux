@@ -1,0 +1,39 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: library-backend
+spec:
+  chart:
+    spec:
+      chart: library-backend
+  ## MODIFT VALUES HERE !
+  values:
+    image:
+      repository: "050565211916.dkr.ecr.eu-central-1.amazonaws.com/coac-library-backend-core" # {"$imagepolicy": "flux-system:library-backend-image-policy:name"}
+      tag: "1.2.68-release-b61281ecd6-1727333489264" # {"$imagepolicy": "flux-system:library-backend-image-policy:tag"}
+    springCloudConfigEnabled: "false"
+    dbCredentialSecret: "library.postgresql.credentials.postgresql.acid.zalan.do"
+    packageSecretRef: "library-backend-secrets"
+    resources:
+      limits:
+        cpu: null
+        memory: 1Gi
+      requests:
+        cpu: null
+        memory: 0Mi
+    ## Ingress 
+    ingress:
+      enabled: true
+      className: nginx
+      annotations:
+        cert-manager.io/cluster-issuer: letsencrypt-production
+        # kubernetes.io/tls-acme: "true"
+      hosts:
+        - host: library-dev.heraeus.coacapp.de
+          paths:
+            - path: "/"
+              pathType: Prefix
+      tls:
+        - secretName: library-tls
+          hosts:
+            - library-dev.heraeus.coacapp.de

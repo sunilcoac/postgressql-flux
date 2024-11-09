@@ -1,0 +1,6 @@
+apiVersion: helm.toolkit.fluxcd.io/v2beta1
+kind: HelmRelease
+metadata:
+  name: not-important # Without including this, we encounter Error.
+  annotations:
+    release_type: "saifty_release" 
