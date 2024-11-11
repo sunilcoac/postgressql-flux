@@ -1,22 +1,22 @@
-## Fetch secrets from Vault (including aws credentials)
-# ---
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   name: external-secrets
-#   namespace: flux-system
-# spec:
-#   interval: 10m
-#   # retryInterval: 1m
-#   timeout: 5m
-#   dependsOn:
-#     - name: external-secrets-helm
-#   sourceRef:
-#     kind: GitRepository
-#     name: flux-system
-#   path: ./cluster-services/externalsecrets/
-#   prune: true
-#   wait: true
+# Fetch secrets from Vault (including aws credentials)
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets
+  namespace: flux-system
+spec:
+  interval: 10m
+  # retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: external-secrets-helm
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./cluster-services/externalsecrets/
+  prune: true
+  wait: true
 
 # Add Cronjob for ECR at saifty-flux namespace
 ---
