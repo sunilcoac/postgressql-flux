@@ -1,22 +1,22 @@
-# ## Install external-secrets
-# ---
-# apiVersion: kustomize.toolkit.fluxcd.io/v1
-# kind: Kustomization
-# metadata:
-#   name: external-secrets-helm
-#   namespace: flux-system
-# spec:
-#   interval: 10m
-#   # retryInterval: 1m
-#   timeout: 5m
-#   dependsOn:
-#     - name: custom-ns
-#   sourceRef:
-#     kind: GitRepository
-#     name: flux-system
-#   path: ./cluster-services/externalsecrets/base/
-#   prune: true
-#   wait: true
+## Install external-secrets
+---
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: external-secrets-helm
+  namespace: flux-system
+spec:
+  interval: 10m
+  # retryInterval: 1m
+  timeout: 5m
+  dependsOn:
+    - name: custom-ns
+  sourceRef:
+    kind: GitRepository
+    name: flux-system
+  path: ./cluster-services/externalsecrets/base/
+  prune: true
+  wait: true
 
 # # Aws creds for dns namespace
 # ---
