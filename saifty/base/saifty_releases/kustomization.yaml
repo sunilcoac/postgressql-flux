@@ -10,7 +10,7 @@ resources:
   # - library-backend_release.yaml
   # - filestorage_release.yaml
   # - federation_client.yaml
-  # - phrases_release.yaml
+  - phrases_release.yaml
   # # - sap-gateway_release.yaml
   # # - federation_server_release.yaml
   # - notification_release.yaml
