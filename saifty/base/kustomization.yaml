@@ -3,8 +3,8 @@ kind: Kustomization
 namespace: saifty-flux
 resources:
   - ./saifty_releases
-  # - saifty_helm_repository.yaml
-  # - rbac.yaml
+  - saifty_helm_repository.yaml
+  - rbac.yaml
 
 patches:
   # Annotate all Saifty Specific releases

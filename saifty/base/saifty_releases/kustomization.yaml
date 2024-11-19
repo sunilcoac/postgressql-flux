@@ -16,6 +16,6 @@ resources:
   # - query_builder_release.yaml
   # - sds-ocr-worker-release.yaml
   - phrases_release.yaml
-  # - rate-limiter_release.yaml
-  # - robots-wrapper_release.yaml
-  # - frontend_release.yaml
+  - rate-limiter_release.yaml
+  - robots-wrapper_release.yaml
+  - frontend_release.yaml
